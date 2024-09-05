@@ -4,34 +4,72 @@
 #include <string>
 #include <numeric>
 #include <random>
+#include <algorithm>
+
+std::random_device rd;
+std::mt19937 gen(rd());
+
+std::uniform_int_distribution<> charDist('a', 'z'); // Generates integers between 1 and 9
+std::uniform_int_distribution<> intDist(1, 9);      // Generates integers between 1 and 9
+std::uniform_real_distribution<> dblDist(0.0, 1.0); // Generates floats between 0.0 and 1.0
 
 class Symbol
 {
 public:
     Symbol(char l, size_t size)
-        : literal(l), probabilities(size, 0.0f)
+        : literal(l), probabilities(size, {'\0', 0.0f})
     {
     }
 
     char literal;
-    std::vector<double> probabilities;
+    std::vector<std::pair<char, double>> probabilities;
 
     void CalculateProbabilities()
     {
-        double total = std::accumulate(probabilities.begin(), probabilities.end(), 0.0);
+        double total = std::accumulate(probabilities.begin(), probabilities.end(), 0.0,
+                                       [](double acc, const std::pair<char, double> &p)
+                                       {
+                                           return acc + p.second;
+                                       });
         for (auto &i : probabilities)
         {
-            i = i / total;
+            i.second = i.second / total;
         }
+        std::sort(probabilities.begin(), probabilities.end(), [](const auto &a, const auto &b)
+                  { return a.second > b.second; });
     }
+    // std::vector<double> GetCumulativeProbabilities
 };
 
 void PrintStats(const Symbol &symbol)
 {
     std::cout << symbol.literal << ":\n";
-    for (size_t i = 0; i <= ('z' - 'a'); i++)
+    for (size_t i = 0; i < symbol.probabilities.size(); i++)
     {
-        std::cout << "\t" << static_cast<char>('a' + i) << ": " << symbol.probabilities[i] << std::endl;
+        std::cout << "\t" << symbol.probabilities[i].first << ": " << symbol.probabilities[i].second << std::endl;
+    }
+    std::cout << std::endl;
+}
+
+void GenSymbolSequence(char out, const std::vector<Symbol> &alphabet)
+{
+    int wordLenght = intDist(gen);
+    for (size_t i = 0; i < wordLenght; i++)
+    {
+        std::cout << out;
+
+        double cumulative = 0.0;
+        double entry = dblDist(gen);
+
+        for (size_t j = 0; j < alphabet[out - 'a'].probabilities.size(); j++)
+        {
+            cumulative += alphabet[out - 'a'].probabilities[j].second;
+            if (entry <= cumulative)
+            {
+                out = alphabet[out - 'a'].probabilities[j].first;
+                break;
+            }
+        }
     }
     std::cout << std::endl;
 }
@@ -63,7 +101,11 @@ int main(int argc, char **argv)
             if (std::isalpha(s))
             {
                 alphabet[f - 'a'].literal = f;
-                alphabet[f - 'a'].probabilities[s - 'a'] += 1;
+                alphabet[f - 'a'].probabilities[s - 'a'].second += 1;
+                if (!alphabet[f - 'a'].probabilities[s - 'a'].first)
+                {
+                    alphabet[f - 'a'].probabilities[s - 'a'].first = s;
+                }
                 f = s;
             }
         }
@@ -72,19 +114,13 @@ int main(int argc, char **argv)
     for (auto &symbol : alphabet)
     {
         symbol.CalculateProbabilities();
-        // PrintStats(symbol);
+        PrintStats(symbol);
     }
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-
-    std::uniform_int_distribution<> intDist(1, 9);      // Generates integers between 1 and 100
-    std::uniform_real_distribution<> dblDist(0.0, 1.0); // Generates floats between 0.0 and 1.0
-
-    for (size_t i = 0; i < intDist(gen); i++)
+    for (size_t i = 0; i < 10; i++)
     {
-        for (size_t j = 0; j < dblDist(gen); j++)
-        {
-        }
-        file.close();
+        GenSymbolSequence(charDist(gen), alphabet);
     }
+
+    file.close();
+}
