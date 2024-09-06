@@ -10,7 +10,7 @@ std::random_device rd;
 std::mt19937 gen(rd());
 
 std::uniform_int_distribution<> charDist('a', 'z'); // Generates integers between 1 and 9
-std::uniform_int_distribution<> intDist(1, 9);      // Generates integers between 1 and 9
+std::uniform_int_distribution<> intDist(3, 9);      // Generates integers between 1 and 9
 std::uniform_real_distribution<> dblDist(0.0, 1.0); // Generates floats between 0.0 and 1.0
 
 class Symbol
@@ -33,12 +33,11 @@ public:
                                        });
         for (auto &i : probabilities)
         {
-            i.second = i.second / total;
+            i.second /= total;
         }
         std::sort(probabilities.begin(), probabilities.end(), [](const auto &a, const auto &b)
                   { return a.second > b.second; });
     }
-    // std::vector<double> GetCumulativeProbabilities
 };
 
 void PrintStats(const Symbol &symbol)
